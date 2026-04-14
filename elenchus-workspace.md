@@ -100,11 +100,25 @@ Hermes spawns Elenchus as a **long-lived subprocess** on startup. It communicate
 **After editing config.yaml, restart Hermes** for the new MCP server to load.
 
 **Setup steps:**
-1. Build the MCP server: `cd mcp-server && npm install && npm run build`
+1. Build the MCP server: `cd ~/elenchus/mcp-server && npm install && node build.mjs`
 2. Initialize data directory: `mkdir -p ~/elenchus/data && cd ~/elenchus/data && git init`
 3. Add elenchus context: create `elenchus-context.json` with domain, project, openQuestion, workStyle
 4. Add to `~/.hermes/config.yaml` (see config above)
 5. Restart Hermes
+
+**Why `node build.mjs` and not `npm run build`:** The MCP SDK v1.29.0 does not export `./server/mcp` or `./server/stdio` in its package.json `exports` field. TypeScript's moduleResolution respects exports even with `moduleResolution: "node10"`. esbuild bundles without checking exports.
+
+**SDK export patch (for future SDK versions that fix this):**
+```bash
+python3 -c "
+import json
+f='node_modules/@modelcontextprotocol/sdk/package.json'
+p=json.load(open(f))
+p['exports']['./server/mcp']={'types':'./dist/esm/server/mcp.d.ts','import':'./dist/esm/server/mcp.js','require':'./dist/cjs/server/mcp.js'}
+p['exports']['./server/stdio']={'types':'./dist/esm/server/stdio.d.ts','import':'./dist/esm/server/stdio.js','require':'./dist/cjs/server/stdio.js'}
+json.dump(p,open(f,'w'),indent=2)
+"
+```
 
 **The default MiniMax API key is used** — replace with the user's own key in config.
 
