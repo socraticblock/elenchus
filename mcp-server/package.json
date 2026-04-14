@@ -1,0 +1,25 @@
+{
+  "name": "elenchus-mcp",
+  "version": "0.1.0",
+  "description": "Elenchus MCP Server — Collaborative Thinking Space for Human + AI",
+  "type": "module",
+  "main": "./dist/mcp-server.js",
+  "bin": {
+    "elenchus-mcp": "./dist/mcp-server.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "openai": "^4.0.0",
+    "gray-matter": "^4.0.3",
+    "simple-git": "^3.22.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.4.0"
+  }
+}
