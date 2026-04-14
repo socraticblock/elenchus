@@ -46,10 +46,54 @@
 
 ### What Still Needs Doing
 
-1. **Context injection on startup** — have Hermes read `elenchus://stats` and recent threads automatically when it starts
+1. **Context injection on startup** — ✅ DONE via Hermes plugin + pre_llm_call hook
 2. **Phase 2 of the original roadmap** — web UI + MCP bridge (currently disconnected)
 3. **Contradiction detection** — the feature that earns Elenchus its name
 4. **Hermes skill for Elenchus** — so the agent can use elenchus tools autonomously
+
+---
+
+## Context Injection — How Elenchus Data Reaches Hermes
+
+Three approaches were evaluated. Approach A (plugin) is what we built.
+
+### Approach A — Hermes Plugin + pre_llm_call hook ✅ (built)
+
+**Location:** `~/.hermes/plugins/elenchus/`
+
+**How it works:**
+- Plugin registers a `pre_llm_call` hook
+- On first turn of every session, reads node files directly from `ELENCHUS_DATA_DIR`
+- Computes stats (counts) and recent thread previews
+- Returns a `{"context": "..."}` dict — injected into the user message
+- Subsequent turns in the same session: no-op (tracked in memory)
+
+**Pros:** No core changes to Hermes. Self-contained. Works on first session turn.
+**Cons:** Injects into user message, not system prompt. Context is ephemeral — not stored in session DB.
+
+**Files:**
+- `~/.hermes/plugins/elenchus/plugin.yaml` — manifest
+- `~/.hermes/plugins/elenchus/__init__.py` — hook implementation (reads `nodes/*.md` and `nodes/*.thread.json`)
+
+### Approach B — MCP Resources (already done)
+
+**How it works:** The MCP server exposes resources (`elenchus://nodes`, `elenchus://stats`, etc.). Hermes can read them via `resources/read` when relevant. No context injection — the agent decides when to use them.
+
+**Status:** Already built and running.
+
+**Pros:** Native MCP design. Zero overhead — only read when needed.
+**Cons:** Passive. Agent must choose to read. Not automatically in context.
+
+### Approach C — External Memory Provider via _memory_manager.build_system_prompt()
+
+**How it works:** Implement a memory provider that adds a block to the system prompt via `_memory_manager.build_system_prompt()`. This would add persistent context that survives session restarts.
+
+**Pros:** System prompt level — survives session boundaries. Persistent.
+**Cons:** Requires implementing the full memory provider interface. More invasive. System prompt grows with every session.
+
+**To explore:** If the plugin approach proves too limited (e.g., context lost on session restart), investigate implementing `build_system_prompt()` on a custom memory provider class.
+
+---
 
 ---
 
