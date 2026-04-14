@@ -4,6 +4,55 @@
 
 ---
 
+## Session Summary — April 14, 2026
+
+*Last updated after this session. Read this first when starting a new session.*
+
+### What We Built This Session
+
+**MCP Resources for Elenchus** — Hermes can now read Elenchus data directly without tool calls.
+
+**The 4 Resources:**
+- `elenchus://nodes` — index of all nodes (id, title, state, updated, tags)
+- `elenchus://nodes/{slug}` — full node with content + thread history
+- `elenchus://threads/{slug}` — just the exchange history for a node
+- `elenchus://stats` — overview: total/open/decided/archived counts, total exchanges, recent 5 nodes
+
+**Critical gotcha discovered and documented:** `registerResource()` does NOT support template strings like `{slug}`. Must use `server.resource()` with `new ResourceTemplate(...)`. The `{variable}` pattern is stored as a literal string in `registerResource()`, making the resource permanently unavailable.
+
+### Architecture Decision — MCP Resources vs Tools
+
+**Before:** User had to explicitly call `elenchus_read` or `elenchus_write` to interact with Elenchus data.
+
+**After:** Hermes can read Elenchus content directly via resources. Tools are for writing and searching. This makes Elenchus data feel natively available to the agent, not a separate database to query.
+
+**The intent:** Elenchus content should be as accessible to Hermes as files on disk — not a separate app to invoke, but a native part of the agent's context. Resources are the MCP primitive for this.
+
+### File Changes This Session
+
+| File | Change |
+|---|---|
+| `~/elenchus/mcp-server/src/mcp/resources.ts` | **NEW** — 4 MCP resources |
+| `~/elenchus/mcp-server/src/mcp-server.ts` | Added `registerResources()` call |
+| `~/.hermes/skills/elenchus-mcp-server-build/SKILL.md` | Added gotchas 6+7, resources section |
+| `~/elenchus-temp/elenchus-workspace.md` | Added MCP Resources table |
+
+### Current State
+
+- **MCP server running:** `~/elenchus/mcp-server/dist/mcp-server.js` (built with esbuild)
+- **Hermes connected:** 7 MCP servers, 89 tools including 6 elenchus tools
+- **Elenchus data:** `~/elenchus/data/nodes/` — git-tracked, 1 test node created
+- **Web UI demo:** `elenchus.vercel.app` — separate from MCP server (localStorage demo mode)
+
+### What Still Needs Doing
+
+1. **Context injection on startup** — have Hermes read `elenchus://stats` and recent threads automatically when it starts
+2. **Phase 2 of the original roadmap** — web UI + MCP bridge (currently disconnected)
+3. **Contradiction detection** — the feature that earns Elenchus its name
+4. **Hermes skill for Elenchus** — so the agent can use elenchus tools autonomously
+
+---
+
 ## What Is Elenchus
 
 **Elenchus (ἔλεγχος)** — the Socratic method of examining beliefs by revealing contradictions.
@@ -96,6 +145,17 @@ mcp_servers:
 Hermes spawns Elenchus as a **long-lived subprocess** on startup. It communicates over stdio using JSON-RPC. The connection persists for the session, reconnects automatically if it drops.
 
 **Tools appear as:** `elenchus_search`, `elenchus_read`, `elenchus_write`, `elenchus_create`, `elenchus_list`, `elenchus_update_state`.
+
+**MCP Resources — Hermes can read Elenchus data directly:**
+
+| Resource | URI | Returns |
+|---|---|---|
+| Node index | `elenchus://nodes` | All nodes: id, title, state, updated, tags |
+| Specific node | `elenchus://nodes/{slug}` | Full node with content + thread history |
+| Specific thread | `elenchus://threads/{slug}` | Just the exchange history |
+| Stats overview | `elenchus://stats` | Counts, total exchanges, recent nodes |
+
+Resources mean Hermes doesn't need a tool call to read Elenchus data — it can be read directly into context.
 
 **After editing config.yaml, restart Hermes** for the new MCP server to load.
 
